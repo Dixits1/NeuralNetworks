@@ -1,0 +1,26 @@
+{
+    "shape": {
+        "nInputs": 2,
+        "nHidden": 2
+    },
+    "weights": [
+        [
+            [1.0, 1.0], 
+            [1.0, 1.0]
+        ],
+        [
+            [1.0], 
+            [1.0]
+        ]
+    ],
+    "training": {
+        "params": {
+            "maxIterations":  10000,
+            "learningRate": 0.3
+        },
+        "data": {
+            "booleanOperator": "and"
+        }
+    },
+    "trainNetwork": true
+}
