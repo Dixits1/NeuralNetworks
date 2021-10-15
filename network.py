@@ -1,249 +1,373 @@
+"""
+" Arjun Dixit
+" September 10, 2021
+"
+" A class which represents a feed-foward, fully-connected neural network with the following specifications:
+" any number of inputs, 1 hidden layer with any number of nodes, and any number of output values.
+" Contains the following methods:
+"
+" __init__(nInputs, nHidden, nOutputs, weights = None)
+" initRandomWeights(randMin, randMax)
+" initArray(n)
+" run()
+" computeLayer(nLayer)
+" getRandomValue(randMin, randMax)
+" printNetworkSpecs()
+" f(x)
+" fDeriv(x)
+" getError()
+" train(inputs, outputs, maxIterations, errorThreshold, lr)
+" getNextTrainingMember()
+" runOverTrainingData()
+"""
 import random
 import math
 import copy
 
-# header
+RANDOM_VALUE_RANGE = [-1.0, 1.5]
+N_LAYERS = 2         # number of layers (not including inputs)
+N_DIGITS_DEC = 8     # number of digits in the decimal after rounding (used when printing values like error)
+GET_ERROR_MULT = 0.5 # used in getError
 
-RANDOM_VALUE_RANGE = [-2.0, 2.0]
-N_OUTPUTS = 1
-N_LAYERS = 2 # number of layers (not including inputs)
 
-"""
-
-"""
 class Network:
-    """
-    """
-    def __init__(self, nInputs, nHidden, weights=None):        
-        self.nInputs = nInputs
-        self.nHidden = nHidden
+   """
+   " Constructor which initializes the instance variables of the network:
+   " 
+   " nInputs specifies the number of inputs
+   " nHidden specifies the number of hidden nodes
+   " nOutputs specifies the number of outputs
+   " weights specifies the weights array to use; if none is provided, weights
+   "         are randomly initialized. 
+   """
+   def __init__(self, nInputs, nHidden, nOutputs, weights = None):      
+      self.nInputs = nInputs
+      self.nHidden = nHidden
+      self.nOutputs = nOutputs
 
-        # input, activation, outputs
-        self.inputs = self.initArray(nInputs) # input array
-        self.thetaj = self.initArray(nHidden) # activations for hidden layer
-        self.hj = self.initArray(nHidden) # outputted values for hidden layer
-        self.theta0 = 0.0 # activation for output layer
-        self.F0 = 0.0 # outputted value of network
-        self.output = 0.0 # true output value
+      # input, activation, outputs
+      self.inputs = self.initArray(nInputs)    # input array
+      self.thetaj = self.initArray(nHidden)    # activations for hidden layer
+      self.hj = self.initArray(nHidden)        # outputted values for hidden layer
+      self.thetai = self.initArray(nOutputs)   # activations for output layer
+      self.Fi = self.initArray(nOutputs)       # outputted values of output layer
+      self.Ti = self.initArray(nOutputs)       # true output values
 
-        self.trainingInputs = self.initArray(1) # all input data used for training
-        self.trainingOutputs = self.initArray(1) # all corresponding output data used for training
-        self.trainingPos = -1 # current position within the training data
+      self.Esum = 0.0                          # total error of network
 
-        # if no weights are provided, initialize the weight array with 0s;
-        # else, initialize the weight array using the weights provided
-        if(weights == None):
-            self.weights = self.initRandomWeights(nInputs, nHidden, RANDOM_VALUE_RANGE[0], RANDOM_VALUE_RANGE[1])
-            
-        else:
-            self.weights = weights
+      self.trainingInputs = self.initArray(1)  # all input data used for training
+      self.trainingOutputs = self.initArray(1) # all corresponding output data used for training
+      self.trainingPos = -1                    # current position within the training data
 
-    # Initializes the weight array as a 3D array:
-    # - D1: the layer
-    # - D2: the input node of the next layer
-    # - D3: the output node in the previous layer
-    # 
-    # The array is initialized with random values between min (inclusive) and 
-    # max (inclusive).
-    # 
-    # nInputs specifies the number of input nodes in the network.
-    # nHidden specifies the number of hidden nodes in the network.
-    # min specifies the minimum random value of the randomly generated values.
-    # max specifies the maximum random value of the randomly generated values.
-    # 
-    # Returns the weights array.
-    def initRandomWeights(self, nInputs, nHidden, min, max):
-        weights = [[[] for i in range(nInputs)],[[] for i in range(nHidden)]]
-        for i in range(nInputs):
-            for j in range(nHidden):
-                weights[0][i].append(self.getRandomValue(min, max))
-            
-        for i in range(nHidden):
-            for j in range(N_OUTPUTS):
-                weights[1][i].append(self.getRandomValue(min, max))
+      # if no weights are provided, initialize the weight array with 0s;
+      # else, initialize the weight array using the weights provided
+      if weights == None:
+         self.weights = self.initRandomWeights(RANDOM_VALUE_RANGE[0], RANDOM_VALUE_RANGE[1])
+      else:
+         print(len(weights[0]))
+         print(nHidden)
+         print(len(weights[N_LAYERS - 1]))
+         print(nOutputs)
+         if not (len(weights[0]) == nHidden and len(weights[N_LAYERS - 1]) == nOutputs):
+            raise Exception("The dimensions of the weights file does not match the provided dimensions.")
+         self.weights = weights
 
-        return weights
+      return
+   # def __init__(self, nInputs, nHidden, nOutputs, weights = None)
 
-    # Returns a 1D array of length n with values of 0.
-    def initArray(self, n):
-        return [0.0 for i in range(n)]
+   """
+   " Initializes the weight array as a 3D array:
+   " - D1: the layer
+   " - D2: the input node of the next layer
+   " - D3: the output node in the previous layer
+   " 
+   " The array is initialized with random values between min (inclusive) and 
+   " max (inclusive).
+   "
+   " randMin specifies the minimum random value of the randomly generated values.
+   " randMax specifies the maximum random value of the randomly generated values.
+   " 
+   " Returns the weights array.
+   """
+   def initRandomWeights(self, randMin, randMax):
+      weights = [[[] for i in range(self.nInputs)],[[] for i in range(self.nHidden)]]
 
-    # Propogate inputs through network by running computeLayer twice.
 
-    # Returns the output value of the network.
-    def run(self):
-        self.zeroNetwork()
+      for i in range(self.nInputs):
+         for j in range(self.nHidden):
+            weights[0][i].append(self.getRandomValue(randMin, randMax))
+         
+      for i in range(self.nHidden):
+         for j in range(self.nOutputs):
+            weights[1][i].append(self.getRandomValue(randMin, randMax))
 
-        for i in range(2):
-            self.computeLayer(i)
+      return weights
+   # def initRandomWeights(self, randMin, randMax)
 
-        return self.F0           
+   """
+   " Returns a 1D array of length n with values of 0.
+   """
+   def initArray(self, n):
+      return [0.0 for i in range(n)]
 
-    # Calculate the activation/output value for the layer specified by nLayer.
-    # 
-    # nLayer of 0 is the hidden layer.
-    # nLayer of 1 is the output layer.
-    # 
-    # Precondition: nLayer is either 0 or 1.
-    # Nothing is returned.
-    def computeLayer(self, nLayer):
+   """
+   " Propogate inputs through network by running computeLayer twice.
+   "
+   " Returns the output values of the network.
+   """
+   def run(self):
+      self.Esum = 0.0
 
-        if nLayer == 0:
-            for j in range(self.nHidden):
-                for i in range(self.nInputs):
-                    self.thetaj[j] += self.weights[0][i][j]*self.inputs[i]
-                self.hj[j] = self.f(self.thetaj[j])
-        elif nLayer == 1:
-            for i in range(self.nHidden):
-                self.theta0 += self.weights[1][i][0]*self.hj[i]
-            self.F0 = self.f(self.theta0)
+      for i in range(N_LAYERS):
+         self.computeLayer(i)
 
-    """
-    Returns a random value between min (inclusive) and max (inclusive) to each element.
-    
-    min specifies the minimum random value
-    max specifies the maximum random value
-    """
-    def getRandomValue(self, min, max):
-        return random.uniform(min, max)
+      return self.Fi
+   # def run(self)
 
-    """
-    The output function of each node in the network.
-    """
-    def f(self, x):
-        return 1.0/(1.0 + math.exp(-x))
-
-    """
-    The derivative of the output function of each node in the network.
-    """
-    def fDeriv(self, x):
-        return self.f(x)*(1.0-self.f(x))
-
-    """
-    Returns the error of network's most recent output using the following equation:
-    ((network output - true output)^2)/2
-    """
-    def getError(self):
-        return ((self.F0 - self.output)**2.0)/2.0
-
-    """
-    Trains the network given a set of inputs and outputs for training data.
-
-    Returns the weights.
-    """
-    def train(self, inputs, outputs, maxIterations, lr):
-        # confirm that length of input and output training data arrays are of same length
-        assert len(inputs) == len(outputs), "The input and output sets are not the same length. input: " + len(inputs) + ", output: " + len(outputs)
-        
-        # set input and output training arrays
-        self.trainingInputs = inputs
-        self.trainingOutputs = outputs
-
-        iterations = 0
-
-        # initialize arrays and values used during training calculations
-        omega0 = 0.0
-        psi0 = 0.0
-        
-        omegaj0 = self.initArray(self.nHidden)
-        psij0 = self.initArray(self.nHidden)
-
-        partialEwkj = copy.deepcopy(self.weights[0])
-        partialEwj0 = copy.deepcopy(self.weights[1])
-
-        delwkj = copy.deepcopy(self.weights[0])
-        delwj0 = copy.deepcopy(self.weights[1])
-
-        # boolean used to determine whether training is finished or not
-        finished = False
-
-        # training loop
-        while not finished:
-            self.inputs, self.output = self.getNextTrainingMember()
-
-            self.run()
-
-            iterations += 1
-
-            omega0 = (self.output - self.F0)
-            psi0 = omega0 * self.fDeriv(self.theta0)
-
-            for j in range(self.nHidden):
-                partialEwj0[j][0] = -self.hj[j]*psi0
-                delwj0[j][0] = -lr*partialEwj0[j][0]
-
-                omegaj0[j] = psi0 * self.weights[1][j][0]
-                
-                psij0[j] = omegaj0[j]*self.fDeriv(self.thetaj[j])
+   """
+   " Calculate the activation/output value for the layer specified by nLayer.
+   " 
+   " nLayer of 0 is the hidden layer.
+   " nLayer of 1 is the output layer.
+   " 
+   " Precondition: nLayer is either 0 or 1.
+   """
+   def computeLayer(self, nLayer):
+      if nLayer == 0:
+         for j in range(self.nHidden):
+            self.thetaj[j] = 0.0
 
             for k in range(self.nInputs):
-                for j in range(self.nHidden):
-                    partialEwkj[k][j] = -self.inputs[k]*psij0[j]        
-                    delwkj[k][j] = -lr*partialEwkj[k][j]
+               self.thetaj[j] += self.weights[0][k][j] * self.inputs[k]
             
-            # applying the weights
-            for k in range(self.nInputs):
-                for j in range(self.nHidden):
-                    self.weights[0][k][j] += delwkj[k][j]
-            
+            self.hj[j] = self.f(self.thetaj[j])
+
+      elif nLayer == 1:
+         for i in range(self.nOutputs):
+            self.thetai[i] = 0.0
+
             for j in range(self.nHidden):
-                self.weights[1][j][0] += delwj0[j][0]
+               self.thetai[i] += self.weights[1][j][i] * self.hj[j]
+         
+            self.Fi[i] = self.f(self.thetai[i])
 
-            # end condition
-            finished = iterations >= maxIterations
+            self.Esum += (self.Ti[i] - self.Fi[i]) * (self.Ti[i] - self.Fi[i])
+      # elif nLayer == 1
 
-        print("\nNetwork has reached maximum iterations.")
-        print("Max Iterations:", maxIterations)
-        print("Learning Rate:", lr)
-        print("# of Inputs:", self.nInputs)
-        print("# of Hidden Nodes:", self.nHidden)
-        print("# of Outputs:", N_OUTPUTS)
-        print("Random Value Range:", RANDOM_VALUE_RANGE)
+      return
+   # def computeLayer(self, nLayer)
 
-        self.runOverTrainingData()
-        
-        return self.weights
-            
-    """
-    Zeroes the thetaj array and hj array as well as the theta0 and F0 values.
-    """
-    def zeroNetwork(self):
-        for i in range(self.nHidden):
-            self.thetaj[i] = 0.0
-            self.hj[i] = 0.0
-        self.theta0 = 0.0
-        self.F0 = 0.0
+   """
+   " Returns a random value between min (inclusive) and max (inclusive) to each element.
+   "
+   " randMin specifies the minimum random value
+   " randMax specifies the maximum random value
+   """
+   def getRandomValue(self, randMin, randMax):
+      return random.uniform(randMin, randMax)
 
-    """
-    Retrieves the next training member in the training set sequentially. Once the end of 
-    the training set is reached, it loops back to the first training member and continues.
+   """
+   " Prints the network specifications in the following format:
+   "
+   " # of Inputs: 2
+   " # of Hidden Nodes: 5
+   " # of Outputs: 3
+   " Random Value Range: [-1.0, 1.5]
+   """
+   def printNetworkSpecs(self):
+      print("\nNumber of Inputs:", self.nInputs)
+      print("Number of Hidden Nodes:", self.nHidden)
+      print("Number of Outputs:", self.nOutputs)
+      print("Random Value Range:", RANDOM_VALUE_RANGE)
 
-    Returns a tuple in the following format:
-    (next training member's inputs, next training member's true outputs)
-    """
-    def getNextTrainingMember(self):
-        self.trainingPos += 1
-        if(self.trainingPos == len(self.trainingInputs)):
-            self.trainingPos = 0
+      return
 
-        return (self.trainingInputs[self.trainingPos], self.trainingOutputs[self.trainingPos])
+   """
+   " The output function of each node in the network; in this case, a sigmoid is used.
+   "
+   " Returns the value of the output function at x.
+   """
+   def f(self, x):
+      return 1.0 / (1.0 + math.exp(-x))
 
-    """
-    Runs the network over each of the values in the training data and prints the results
-    in the following format:
+   """
+   " The derivative of the output function of each node in the network.
+   "
+   " Returns the value of the output function's derivative at x.
+   """
+   def fDeriv(self, x):
+      fx = self.f(x)
+      return fx * (1.0 - fx)
 
-    Network Inputs  Network Output  True Output     Error
-    [0.0, 0.0]       0.01857         0.0             0.0001723342
-    [1.0, 0.0]       0.98305         1.0             0.0001437082
-    [0.0, 1.0]       0.9837          1.0             0.0001328677
-    [1.0, 1.0]       0.01679         0.0             0.0001409572
-    """
-    def runOverTrainingData(self):
-        print("\nNetwork Inputs\tNetwork Output\tTrue Output\tError\t")
-        for input, output in zip(self.trainingInputs, self.trainingOutputs):
-            self.inputs = input
-            self.output = output
-            
-            self.run()
+   """
+   " Returns the error of the network.
+   """
+   def getError(self):
+      return GET_ERROR_MULT * self.Esum
 
-            print(self.inputs, "\t", round(self.F0, 5), "\t", round(self.output, 5), "\t\t", round(self.getError(), 10))
+   """
+   " Trains the network given a set of inputs and outputs for training data as well as the max iterations,
+   " error threshold, and learning rate.
+   " 
+   " inputs specifies the input training data
+   " outputs specifies the output training data
+   " maxIterations specifies the maximum iterations for training
+   " errorThreshold specifies the threshold which the training set error
+   "                must reach before exiting training
+   " lr specifies lambda, or the learning rate
+   "
+   " Precondition: input and output arrays are the same length.
+   "  
+   " Returns the weights after training is completed.
+   """
+   def train(self, inputs, outputs, maxIterations, errorThreshold, lr):
+      # initialize arrays and values used during training calculations
+      omegaj = self.initArray(self.nHidden)
+      psij = self.initArray(self.nHidden)
+      
+      omegai = self.initArray(self.nOutputs)
+      psii = self.initArray(self.nOutputs)
+
+      partialEwkj = copy.deepcopy(self.weights[0]) # creates new array with same structure as weights for input -> hidden
+      partialEwji = copy.deepcopy(self.weights[1]) # creates new array with same structure as weights for hidden -> output
+
+      delwkj = copy.deepcopy(self.weights[0])      # creates new array with same structure as weights for input -> hidden
+      delwji = copy.deepcopy(self.weights[1])      # creates new array with same structure as weights for hidden -> output
+
+      iterations = 0
+      
+      totalError = 0.0                             # sum of error used for end condition
+      trainingLen = len(inputs)                    # length of training set
+      
+      finished = False                             # used to determine whether training is finished or not
+      errorThresholdReached = False
+      maxIterationsReached = False
+
+      # set input and output training arrays
+      self.trainingInputs = inputs
+      self.trainingOutputs = outputs
+
+
+      # training loop
+      while not finished:
+         self.inputs, self.Ti = self.getNextTrainingMember()
+
+         self.run()
+
+         for i in range(self.nOutputs):
+            omegai[i] = self.Ti[i] - self.Fi[i]
+            psii[i] = omegai[i] * self.fDeriv(self.thetai[i])
+
+            for j in range(self.nHidden):
+               partialEwji[j][i] = -self.hj[j] * psii[i]
+               delwji[j][i] = -lr * partialEwji[j][i]
+
+         for j in range(self.nHidden):
+            omegaj[j] = 0.0
+
+            for i in range(self.nOutputs):
+               omegaj[j] += psii[i] * self.weights[1][j][i]
+
+         for j in range(self.nHidden):
+            psij[j] = omegaj[j] * self.fDeriv(self.thetaj[j])
+
+            for k in range(self.nInputs):
+               partialEwkj[k][j] = -self.inputs[k] * psij[j]      
+               delwkj[k][j] = -lr * partialEwkj[k][j]
+         
+         # applying the weights
+         for k in range(self.nInputs):
+            for j in range(self.nHidden):
+               self.weights[0][k][j] += delwkj[k][j]
+         
+         for j in range(self.nHidden):
+            for i in range(self.nOutputs):
+               self.weights[1][j][i] += delwji[j][i]
+
+         
+         iterations += 1
+         totalError += self.getError()
+         if self.trainingPos == trainingLen - 1: # occurs once everytime it finishes looping over all training members
+            # check if average error across training members is less than errorThreshold
+            errorThresholdReached = totalError <= errorThreshold
+            totalError = 0.0
+
+
+         maxIterationsReached = iterations >= maxIterations
+
+         # end condition
+         finished = maxIterationsReached or errorThresholdReached
+      # while not finished
+      
+      self.runOverTrainingData()
+
+      if errorThresholdReached:
+         print("Network has reached the error threshold.")
+      if maxIterationsReached:
+         print("Network has reached maximum iterations.")
+
+      print("\nMax Iterations:", maxIterations)
+      print("Error Threshold:", errorThreshold)
+      print("Learning Rate:", lr)
+
+      self.printNetworkSpecs()
+      
+      return self.weights
+   # def train(self, inputs, outputs, maxIterations, errorThreshold, lr)
+
+   """
+   " Retrieves the next training member in the training set sequentially. Once the end of 
+   " the training set is reached, it loops back to the first training member and continues.
+   " 
+   " Returns a tuple in the following format:
+   " (next training member's inputs, next training member's true outputs)
+   """
+   def getNextTrainingMember(self):
+      self.trainingPos += 1
+      if self.trainingPos == len(self.trainingInputs):
+         self.trainingPos = 0
+
+      return (self.trainingInputs[self.trainingPos], self.trainingOutputs[self.trainingPos])
+
+   """
+   " Runs the network over each of the values in the training data and prints the results
+   " in the following format:
+   " 
+   " Network Inputs Network Output True Output Error 
+   " [0.0, 0.0]   [0.02027223, 0.00016129, 0.01689993]   [0.0, 0.0, 0.0]      0.0003483
+   " [1.0, 0.0]   [0.98145447, 0.01045743, 0.98651243]   [1.0, 0.0, 1.0]      0.0003176
+   " [0.0, 1.0]   [0.98074885, 0.01256923, 0.98889583]   [1.0, 0.0, 1.0]      0.00032595
+   " [1.0, 1.0]   [0.02159712, 0.98290588, 0.99978671]   [0.0, 1.0, 1.0]      0.00037935
+   " 
+   " Total Error: 
+   """
+   def runOverTrainingData(self):
+      TiRounded = []
+      FiRounded = []
+      errorRounded = 0.0
+      totalError = 0.0
+
+
+      self.trainingPos = -1
+
+      print("\nNetwork Inputs\tNetwork Output\tTrue Output\tError\t")
+      
+      for i in range(len(self.trainingInputs)):
+         self.inputs, self.Ti = self.getNextTrainingMember()
+
+         self.run()
+         
+         TiRounded = [round(i, N_DIGITS_DEC) for i in self.Ti]
+         FiRounded = [round(i, N_DIGITS_DEC) for i in self.Fi]
+         errorRounded = round(self.getError(), N_DIGITS_DEC)
+
+         totalError += errorRounded
+
+         print(self.inputs, "\t", FiRounded, "\t", TiRounded, "\t\t", errorRounded)
+      # for i in range(len(self.trainingInputs))
+
+      print("\nTotal Error: ", round(totalError, N_DIGITS_DEC))
+
+      return
+   # def runOverTrainingData(self)
+# class Network
