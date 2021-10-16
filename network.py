@@ -21,7 +21,7 @@
 " runOverTrainingData()
 """
 import random
-import math
+from math import exp
 import copy
 
 RANDOM_VALUE_RANGE = [-1.0, 1.5]
@@ -29,6 +29,8 @@ N_LAYERS = 2         # number of layers (not including inputs)
 N_DIGITS_DEC = 8     # number of digits in the decimal after rounding (used when printing values like error)
 GET_ERROR_MULT = 0.5 # used in getError
 
+# TODO: make sure raise Exception in constructor works correctly
+# TODO: fix set the set weights when running functionality??
 
 class Network:
    """
@@ -44,6 +46,10 @@ class Network:
       self.nInputs = nInputs
       self.nHidden = nHidden
       self.nOutputs = nOutputs
+
+      self.nInputsR = range(self.nInputs)
+      self.nHiddenR = range(self.nHidden)
+      self.nOutputsR = range(self.nOutputs)
 
       # input, activation, outputs
       self.inputs = self.initArray(nInputs)    # input array
@@ -111,6 +117,23 @@ class Network:
       return [0.0 for i in range(n)]
 
    """
+   " The output function of each node in the network; in this case, a sigmoid is used.
+   "
+   " Returns the value of the output function at x.
+   """
+   def f(self, x):
+      return 1.0 / (1.0 + exp(-x))
+
+   """
+   " The derivative of the output function of each node in the network.
+   "
+   " Returns the value of the output function's derivative at x.
+   """
+   def fDeriv(self, x):
+      fx = self.f(x)
+      return fx * (1.0 - fx)
+
+   """
    " Propogate inputs through network by running computeLayer twice.
    "
    " Returns the output values of the network.
@@ -118,44 +141,26 @@ class Network:
    def run(self):
       self.Esum = 0.0
 
-      for i in range(N_LAYERS):
-         self.computeLayer(i)
+      for j in self.nHiddenR:
+         self.thetaj[j] = 0.0
+
+         for k in self.nInputsR:
+            self.thetaj[j] += self.weights[0][k][j] * self.inputs[k]
+         
+         self.hj[j] = self.f(self.thetaj[j])
+
+      for i in self.nOutputsR:
+         self.thetai[i] = 0.0
+
+         for j in self.nHiddenR:
+            self.thetai[i] += self.weights[1][j][i] * self.hj[j]
+      
+         self.Fi[i] = self.f(self.thetai[i])
+
+         self.Esum += (self.Ti[i] - self.Fi[i]) * (self.Ti[i] - self.Fi[i])
 
       return self.Fi
    # def run(self)
-
-   """
-   " Calculate the activation/output value for the layer specified by nLayer.
-   " 
-   " nLayer of 0 is the hidden layer.
-   " nLayer of 1 is the output layer.
-   " 
-   " Precondition: nLayer is either 0 or 1.
-   """
-   def computeLayer(self, nLayer):
-      if nLayer == 0:
-         for j in range(self.nHidden):
-            self.thetaj[j] = 0.0
-
-            for k in range(self.nInputs):
-               self.thetaj[j] += self.weights[0][k][j] * self.inputs[k]
-            
-            self.hj[j] = self.f(self.thetaj[j])
-
-      elif nLayer == 1:
-         for i in range(self.nOutputs):
-            self.thetai[i] = 0.0
-
-            for j in range(self.nHidden):
-               self.thetai[i] += self.weights[1][j][i] * self.hj[j]
-         
-            self.Fi[i] = self.f(self.thetai[i])
-
-            self.Esum += (self.Ti[i] - self.Fi[i]) * (self.Ti[i] - self.Fi[i])
-      # elif nLayer == 1
-
-      return
-   # def computeLayer(self, nLayer)
 
    """
    " Returns a random value between min (inclusive) and max (inclusive) to each element.
@@ -181,23 +186,6 @@ class Network:
       print("Random Value Range:", RANDOM_VALUE_RANGE)
 
       return
-
-   """
-   " The output function of each node in the network; in this case, a sigmoid is used.
-   "
-   " Returns the value of the output function at x.
-   """
-   def f(self, x):
-      return 1.0 / (1.0 + math.exp(-x))
-
-   """
-   " The derivative of the output function of each node in the network.
-   "
-   " Returns the value of the output function's derivative at x.
-   """
-   def fDeriv(self, x):
-      fx = self.f(x)
-      return fx * (1.0 - fx)
 
    """
    " Returns the error of the network.
@@ -247,43 +235,41 @@ class Network:
       self.trainingInputs = inputs
       self.trainingOutputs = outputs
 
-
       # training loop
       while not finished:
          self.inputs, self.Ti = self.getNextTrainingMember()
 
          self.run()
 
-         for i in range(self.nOutputs):
+         for i in self.nOutputsR:
             omegai[i] = self.Ti[i] - self.Fi[i]
             psii[i] = omegai[i] * self.fDeriv(self.thetai[i])
 
-            for j in range(self.nHidden):
+            for j in self.nHiddenR:
                partialEwji[j][i] = -self.hj[j] * psii[i]
                delwji[j][i] = -lr * partialEwji[j][i]
 
-         for j in range(self.nHidden):
+         for j in self.nHiddenR:
             omegaj[j] = 0.0
 
-            for i in range(self.nOutputs):
+            for i in self.nOutputsR:
                omegaj[j] += psii[i] * self.weights[1][j][i]
 
-         for j in range(self.nHidden):
+         for j in self.nHiddenR:
             psij[j] = omegaj[j] * self.fDeriv(self.thetaj[j])
 
-            for k in range(self.nInputs):
+            for k in self.nInputsR:
                partialEwkj[k][j] = -self.inputs[k] * psij[j]      
                delwkj[k][j] = -lr * partialEwkj[k][j]
          
          # applying the weights
-         for k in range(self.nInputs):
-            for j in range(self.nHidden):
+         for k in self.nInputsR:
+            for j in self.nHiddenR:
                self.weights[0][k][j] += delwkj[k][j]
          
-         for j in range(self.nHidden):
-            for i in range(self.nOutputs):
+         for j in self.nHiddenR:
+            for i in self.nOutputsR:
                self.weights[1][j][i] += delwji[j][i]
-
          
          iterations += 1
          totalError += self.getError()

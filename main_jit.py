@@ -10,9 +10,11 @@
 "
 """
 import json
-from network import Network
+# from network import Network
+from network_jit import Network
 import operator
 import time
+import numpy as np
 
 CONFIG_FILE_NAME = "config.json"
 
@@ -33,13 +35,13 @@ def loadConfig(fName):
 " (array of training input arrays, array of training output arrays)
 """
 def genBooleanTrainingData(booleanFnStrs):
-   inputs = [
+   inputs = np.array([
       [0.0, 0.0], 
       [1.0, 0.0], 
       [0.0, 1.0], 
       [1.0, 1.0]
-      ]
-   outputs = [[] for i in range(len(inputs))]
+      ], dtype=np.float32)
+   outputs = np.zeros((len(inputs), len(booleanFnStrs)), dtype=np.float32)
    booleanFns = []
 
    # convert string to function
@@ -50,7 +52,7 @@ def genBooleanTrainingData(booleanFnStrs):
    for i in range(len(inputs)):
       for j in booleanFns:
          # run boolean function using int representations of inputs, convert output to float and append to outputs array
-         outputs[i].append(float(j(int(inputs[i][0]), int(inputs[i][1]))))
+         outputs[i] = float(j(int(inputs[i][0]), int(inputs[i][1])))
 
    return (inputs, outputs)
 # def genBooleanTrainingData(booleanFnStrs)
@@ -73,7 +75,7 @@ if __name__ == "__main__":
       # training
       t = time.time()
       network.train(inputs, outputs, tParams['maxIterations'], tParams['errorThreshold'], tParams['learningRate'])
-      print("\nTraining time: " + str(time.time() - t))
+      print(time.time() - t)
    else:
       # running
       network.weights = config['weights']

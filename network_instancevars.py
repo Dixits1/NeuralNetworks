@@ -21,20 +21,16 @@
 " runOverTrainingData()
 """
 import random
-import math
+from math import exp
 import copy
-from jitspec import *
-from numba import jit
-import numpy as np
 
-RANDOM_VALUE_MIN = -1.0
-RANDOM_VALUE_MAX = 1.5
+RANDOM_VALUE_RANGE = [-1.0, 1.5]
 N_LAYERS = 2         # number of layers (not including inputs)
 N_DIGITS_DEC = 8     # number of digits in the decimal after rounding (used when printing values like error)
 GET_ERROR_MULT = 0.5 # used in getError
 
+# TODO: make sure raise Excpetion in constructor works correctly
 
-@jitclass(spec)
 class Network:
    """
    " Constructor which initializes the instance variables of the network:
@@ -45,7 +41,7 @@ class Network:
    " weights specifies the weights array to use; if none is provided, weights
    "         are randomly initialized. 
    """
-   def __init__(self, nInputs, nHidden, nOutputs, weights = np.zeros((1,1,1), dtype=np.float32)):      
+   def __init__(self, nInputs, nHidden, nOutputs, weights = None):      
       self.nInputs = nInputs
       self.nHidden = nHidden
       self.nOutputs = nOutputs
@@ -60,24 +56,14 @@ class Network:
 
       self.Esum = 0.0                          # total error of network
 
-      self.trainingInputs = self.initArray2D(1, 1)  # all input data used for training
-      self.trainingOutputs = self.initArray2D(1, 1) # all corresponding output data used for training
+      self.trainingInputs = self.initArray(1)  # all input data used for training
+      self.trainingOutputs = self.initArray(1) # all corresponding output data used for training
       self.trainingPos = -1                    # current position within the training data
-
-      # initialize arrays and values used during training calculations
-      self.omegaj = self.initArray(self.nHidden)
-      self.omegai = self.initArray(self.nOutputs)
-      self.psij = self.initArray(self.nHidden)
-      self.psii = self.initArray(self.nOutputs)
-      self.partialEwkj = self.initArray2D(self.nInputs, self.nHidden)
-      self.partialEwji = self.initArray2D(self.nHidden, self.nOutputs)
-      self.delwkj = self.initArray2D(self.nInputs, self.nHidden)
-      self.delwji = self.initArray2D(self.nHidden, self.nOutputs)
 
       # if no weights are provided, initialize the weight array with 0s;
       # else, initialize the weight array using the weights provided
-      if len(weights) != 0:
-         self.weights = self.initRandomWeights(RANDOM_VALUE_MIN, RANDOM_VALUE_MAX)
+      if weights == None:
+         self.weights = self.initRandomWeights(RANDOM_VALUE_RANGE[0], RANDOM_VALUE_RANGE[1])
       else:
          print(len(weights[0]))
          print(nHidden)
@@ -105,16 +91,16 @@ class Network:
    " Returns the weights array.
    """
    def initRandomWeights(self, randMin, randMax):
-      maxDim = max([self.nInputs, self.nHidden, self.nOutputs])
-      weights = np.zeros((2, maxDim, maxDim), dtype=np.float32)
-   
-      for k in range(self.nInputs):
+      weights = [[[] for i in range(self.nInputs)],[[] for i in range(self.nHidden)]]
+
+
+      for i in range(self.nInputs):
          for j in range(self.nHidden):
-            weights[0][k][j] = self.getRandomValue(randMin, randMax)
+            weights[0][i].append(self.getRandomValue(randMin, randMax))
          
-      for j in range(self.nHidden):
-         for i in range(self.nOutputs):
-            weights[1][j][i] = self.getRandomValue(randMin, randMax)
+      for i in range(self.nHidden):
+         for j in range(self.nOutputs):
+            weights[1][i].append(self.getRandomValue(randMin, randMax))
 
       return weights
    # def initRandomWeights(self, randMin, randMax)
@@ -123,11 +109,7 @@ class Network:
    " Returns a 1D array of length n with values of 0.
    """
    def initArray(self, n):
-      return np.zeros(n, dtype=np.float32)
-
-   def initArray2D(self, a, b):
-      return np.zeros((a, b), dtype=np.float32)
-
+      return [0.0 for i in range(n)]
 
    """
    " Propogate inputs through network by running computeLayer twice.
@@ -150,7 +132,7 @@ class Network:
    " nLayer of 1 is the output layer.
    " 
    " Precondition: nLayer is either 0 or 1.
-   """   
+   """
    def computeLayer(self, nLayer):
       if nLayer == 0:
          for j in range(self.nHidden):
@@ -197,7 +179,7 @@ class Network:
       print("\nNumber of Inputs:", self.nInputs)
       print("Number of Hidden Nodes:", self.nHidden)
       print("Number of Outputs:", self.nOutputs)
-      print("Random Value Range:", [RANDOM_VALUE_MIN, RANDOM_VALUE_MAX])
+      print("Random Value Range:", RANDOM_VALUE_RANGE)
 
       return
 
@@ -207,7 +189,7 @@ class Network:
    " Returns the value of the output function at x.
    """
    def f(self, x):
-      return 1.0 / (1.0 + math.exp(-x))
+      return 1.0 / (1.0 + exp(-x))
 
    """
    " The derivative of the output function of each node in the network.
@@ -240,6 +222,19 @@ class Network:
    " Returns the weights after training is completed.
    """
    def train(self, inputs, outputs, maxIterations, errorThreshold, lr):
+      # initialize arrays and values used during training calculations
+      omegaj = self.initArray(self.nHidden)
+      psij = self.initArray(self.nHidden)
+      
+      omegai = self.initArray(self.nOutputs)
+      psii = self.initArray(self.nOutputs)
+
+      partialEwkj = copy.deepcopy(self.weights[0]) # creates new array with same structure as weights for input -> hidden
+      partialEwji = copy.deepcopy(self.weights[1]) # creates new array with same structure as weights for hidden -> output
+
+      delwkj = copy.deepcopy(self.weights[0])      # creates new array with same structure as weights for input -> hidden
+      delwji = copy.deepcopy(self.weights[1])      # creates new array with same structure as weights for hidden -> output
+
       iterations = 0
       
       totalError = 0.0                             # sum of error used for end condition
@@ -259,8 +254,38 @@ class Network:
          self.inputs, self.Ti = self.getNextTrainingMember()
 
          self.run()
-         self.updateWeights(lr)
 
+         for i in range(self.nOutputs):
+            omegai[i] = self.Ti[i] - self.Fi[i]
+            psii[i] = omegai[i] * self.fDeriv(self.thetai[i])
+
+            for j in range(self.nHidden):
+               partialEwji[j][i] = -self.hj[j] * psii[i]
+               delwji[j][i] = -lr * partialEwji[j][i]
+
+         for j in range(self.nHidden):
+            omegaj[j] = 0.0
+
+            for i in range(self.nOutputs):
+               omegaj[j] += psii[i] * self.weights[1][j][i]
+
+         for j in range(self.nHidden):
+            psij[j] = omegaj[j] * self.fDeriv(self.thetaj[j])
+
+            for k in range(self.nInputs):
+               partialEwkj[k][j] = -self.inputs[k] * psij[j]      
+               delwkj[k][j] = -lr * partialEwkj[k][j]
+         
+         # applying the weights
+         for k in range(self.nInputs):
+            for j in range(self.nHidden):
+               self.weights[0][k][j] += delwkj[k][j]
+         
+         for j in range(self.nHidden):
+            for i in range(self.nOutputs):
+               self.weights[1][j][i] += delwji[j][i]
+
+         
          iterations += 1
          totalError += self.getError()
          if self.trainingPos == trainingLen - 1: # occurs once everytime it finishes looping over all training members
@@ -304,41 +329,6 @@ class Network:
          self.trainingPos = 0
 
       return (self.trainingInputs[self.trainingPos], self.trainingOutputs[self.trainingPos])
-
-   @jit(nopython=True)
-   def updateWeights(self, lr):
-      for i in range(self.nOutputs):
-         self.omegai[i] = self.Ti[i] - self.Fi[i]
-         self.psii[i] = self.omegai[i] * self.fDeriv(self.thetai[i])
-
-         for j in range(self.nHidden):
-            self.partialEwji[j][i] = -self.hj[j] * self.psii[i]
-            self.delwji[j][i] = -lr * self.partialEwji[j][i]
-
-      for j in range(self.nHidden):
-         self.omegaj[j] = 0.0
-
-         for i in range(self.nOutputs):
-            self.omegaj[j] += self.psii[i] * self.weights[1][j][i]
-
-      for j in range(self.nHidden):
-         self.psij[j] = self.omegaj[j] * self.fDeriv(self.thetaj[j])
-
-         for k in range(self.nInputs):
-            self.partialEwkj[k][j] = -self.inputs[k] * self.psij[j]      
-            self.delwkj[k][j] = -lr * self.partialEwkj[k][j]
-      
-      # applying the weights
-      for k in range(self.nInputs):
-         for j in range(self.nHidden):
-            self.weights[0][k][j] += self.delwkj[k][j]
-      
-      for j in range(self.nHidden):
-         for i in range(self.nOutputs):
-            self.weights[1][j][i] += self.delwji[j][i]
-
-      return
-   # def updateWeights()
 
    """
    " Runs the network over each of the values in the training data and prints the results
