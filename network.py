@@ -23,6 +23,8 @@
 import random
 from math import exp
 import copy
+from itertools import accumulate
+from operator import mul
 
 RANDOM_VALUE_RANGE = [-1.0, 1.5]
 N_LAYERS = 2         # number of layers (not including inputs)
@@ -250,10 +252,7 @@ class Network:
                delwji[j][i] = -lr * partialEwji[j][i]
 
          for j in self.nHiddenR:
-            omegaj[j] = 0.0
-
-            for i in self.nOutputsR:
-               omegaj[j] += psii[i] * self.weights[1][j][i]
+            omegaj[j] = sum(map(mul, psii, self.weights[1][j]))
 
          for j in self.nHiddenR:
             psij[j] = omegaj[j] * self.fDeriv(self.thetaj[j])
