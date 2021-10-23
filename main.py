@@ -7,7 +7,6 @@
 "
 " loadConfig(fName)
 " genBooleanTrainingData(booleanFnStrs)
-"
 """
 import json
 from network import Network

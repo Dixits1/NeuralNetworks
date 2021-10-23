@@ -67,15 +67,11 @@ class Network:
       self.trainingOutputs = self.initArray(1) # all corresponding output data used for training
       self.trainingPos = -1                    # current position within the training data
 
-      # if no weights are provided, initialize the weight array with 0s;
+      # if no weights are provided, initialize the weight array with random values;
       # else, initialize the weight array using the weights provided
       if weights == None:
          self.weights = self.initRandomWeights(RANDOM_VALUE_RANGE[0], RANDOM_VALUE_RANGE[1])
       else:
-         print(len(weights[0]))
-         print(nHidden)
-         print(len(weights[N_LAYERS - 1]))
-         print(nOutputs)
          if not (len(weights[0]) == nHidden and len(weights[N_LAYERS - 1]) == nOutputs):
             raise Exception("The dimensions of the weights file does not match the provided dimensions.")
          self.weights = weights
@@ -89,8 +85,8 @@ class Network:
    " - D2: the input node of the next layer
    " - D3: the output node in the previous layer
    " 
-   " The array is initialized with random values between min (inclusive) and 
-   " max (inclusive).
+   " The array is initialized with random values between randMin (inclusive) and 
+   " randMax (inclusive).
    "
    " randMin specifies the minimum random value of the randomly generated values.
    " randMax specifies the maximum random value of the randomly generated values.
@@ -165,7 +161,7 @@ class Network:
    # def run(self)
 
    """
-   " Returns a random value between min (inclusive) and max (inclusive) to each element.
+   " Returns a random value between randMin (inclusive) and randMax (inclusive) to each element.
    "
    " randMin specifies the minimum random value
    " randMax specifies the maximum random value
@@ -176,9 +172,9 @@ class Network:
    """
    " Prints the network specifications in the following format:
    "
-   " # of Inputs: 2
-   " # of Hidden Nodes: 5
-   " # of Outputs: 3
+   " Number of Inputs: 2
+   " Number of Hidden Nodes: 5
+   " Number of Outputs: 3
    " Random Value Range: [-1.0, 1.5]
    """
    def printNetworkSpecs(self):
@@ -252,7 +248,7 @@ class Network:
                delwji[j][i] = -lr * partialEwji[j][i]
 
          for j in self.nHiddenR:
-            omegaj[j] = sum(map(mul, psii, self.weights[1][j]))
+            omegaj = sum(map(mul, psii, self.weights[1][j]))
 
          for j in self.nHiddenR:
             psij[j] = omegaj[j] * self.fDeriv(self.thetaj[j])
@@ -319,12 +315,12 @@ class Network:
    " in the following format:
    " 
    " Network Inputs Network Output True Output Error 
-   " [0.0, 0.0]   [0.02027223, 0.00016129, 0.01689993]   [0.0, 0.0, 0.0]      0.0003483
-   " [1.0, 0.0]   [0.98145447, 0.01045743, 0.98651243]   [1.0, 0.0, 1.0]      0.0003176
-   " [0.0, 1.0]   [0.98074885, 0.01256923, 0.98889583]   [1.0, 0.0, 1.0]      0.00032595
-   " [1.0, 1.0]   [0.02159712, 0.98290588, 0.99978671]   [0.0, 1.0, 1.0]      0.00037935
-   " 
-   " Total Error: 
+   " [0.0, 0.0]   [0.01949439, 0.00020501, 0.0173927]    [0.0, 0.0, 0.0]      0.00034129
+   " [1.0, 0.0]   [0.98150611, 0.01207658, 0.98872078]   [1.0, 0.0, 1.0]      0.00030754
+   " [0.0, 1.0]   [0.98378772, 0.01133334, 0.98821289]   [1.0, 0.0, 1.0]      0.00026511
+   " [1.0, 1.0]   [0.0179882, 0.98426464, 0.99965449]    [0.0, 1.0, 1.0]      0.00028565
+   "
+   " Total Error:  0.00119959
    """
    def runOverTrainingData(self):
       TiRounded = []
