@@ -126,10 +126,9 @@ def printToC(fName):
 
 	print("\" " + "\n\" ".join(toc))
 
-printToC("network.py")
-print("\n")
-printToC("main.py")
+
 lint("network.py")
 lint("main.py")
+lint("fileio.py")
 
 
