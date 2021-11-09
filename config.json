@@ -1,19 +1,13 @@
 {
     "shape": {
         "nInputs": 2,
-        "nHidden": 20,
+        "nHidden": 5,
         "nOutputs": 3
     },
-    "weights": [
-        [
-            [1.485744983219413, -0.16658476414356882], 
-            [0.13387164163902954, 0.2506992660911549]
-        ], 
-        [
-            [-0.5026747947632456, -0.09840216249299316, 0.6722545327957024], 
-            [-0.03704253124764856, 1.0020297462005954, -0.2064998480711311]
-        ]
-    ],
+    "weights": {
+        "fileName": "weights.json",
+        "loadFromFile": false
+    },
     "training": {
         "params": {
             "maxIterations":  100000,
@@ -21,6 +15,8 @@
             "errorThreshold": 0.001
         },
         "data": {
+            "fileName": "",
+            "loadFromFile": false,
             "booleanOperators": ["xor", "and", "or"]
         }
     },

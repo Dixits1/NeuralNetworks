@@ -5,26 +5,16 @@
 " The main file used to run the network with parameters specified by the config file of CONFIG_FILE_NAME.
 " Contains the following methods:
 "
-" loadConfig(fName)
 " genBooleanTrainingData(booleanFnStrs)
-"
 """
-import json
+
 from network import Network
 import operator
-import time
+from fileio import *
+import sys
 
-CONFIG_FILE_NAME = "config.json"
-
-"""
-" Loads the config from a JSON file (.json), and
-" returns a JSON object representing the contents of the file.
-"
-" fName specifies the name of the file from which the config should
-"       be loaded. The provided filename must include the file extension.
-"""
-def loadConfig(fName):
-   return json.load(open(fName,))
+DEFAULT_CONFIG_NAME = "config.json" 
+N_ARGS_CONFIG = 2  # the number of args needed for the config to be in args
 
 """
 " Generates training input and output data given the name of a boolean operator as a string in lowercase.
@@ -58,7 +48,8 @@ def genBooleanTrainingData(booleanFnStrs):
 # main
 if __name__ == "__main__":
    # load config
-   config = loadConfig(CONFIG_FILE_NAME)
+   configName = sys.argv[0] if len(sys.argv) == N_ARGS_CONFIG else DEFAULT_CONFIG_NAME
+   config = loadConfig(configName)
    tParams = config['training']['params'] # training parameters
 
    # create the network
@@ -67,13 +58,10 @@ if __name__ == "__main__":
    # input/output training data
    inputs, outputs = genBooleanTrainingData(config['training']['data']['booleanOperators'])
 
-
    # choose training vs running
    if config['trainNetwork']:
       # training
-      t = time.time()
       network.train(inputs, outputs, tParams['maxIterations'], tParams['errorThreshold'], tParams['learningRate'])
-      print("\nTraining time: " + str(time.time() - t))
    else:
       # running
       network.weights = config['weights']
@@ -83,5 +71,5 @@ if __name__ == "__main__":
       network.runOverTrainingData()
 
 
-   print("\nConfig File:", CONFIG_FILE_NAME, "\n")
+   print("\nConfig File:", configName, "\n")
 # if __name__ == "__main__"
