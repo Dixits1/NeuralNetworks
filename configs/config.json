@@ -5,8 +5,8 @@
         "nOutputs": 3
     },
     "weights": {
-        "fileName": "weights.json",
-        "loadFromFile": false
+        "loadFromFile": true,
+        "fileName": "weights.p"
     },
     "training": {
         "params": {
@@ -15,10 +15,14 @@
             "errorThreshold": 0.001
         },
         "data": {
-            "fileName": "",
             "loadFromFile": false,
+            "fileName": "",
             "booleanOperators": ["xor", "and", "or"]
+        },
+        "weights": {
+            "saveToFile": true,
+            "fileName": "weights.p"
         }
     },
-    "trainNetwork": true
+    "trainNetwork": false
 }

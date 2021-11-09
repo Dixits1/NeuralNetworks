@@ -7,14 +7,14 @@
 " Contains the following methods:
 "
 " __init__(nInputs, nHidden, nOutputs, weights = None)
+" verifyWeights(weights)
 " initRandomWeights(randMin, randMax)
 " initArray(n)
-" run()
-" computeLayer(nLayer)
-" getRandomValue(randMin, randMax)
-" printNetworkSpecs()
 " f(x)
 " fDeriv(x)
+" run()
+" getRandomValue(randMin, randMax)
+" printNetworkSpecs()
 " getError()
 " train(inputs, outputs, maxIterations, errorThreshold, lr)
 " getNextTrainingMember()
@@ -22,15 +22,13 @@
 """
 import random
 from math import exp
-import copy
-from itertools import accumulate
-from operator import mul
 import time
 
 RANDOM_VALUE_RANGE = [-1.0, 1.5]
 N_LAYERS = 2         # number of layers (not including inputs)
 N_DIGITS_DEC = 8     # number of digits in the decimal after rounding (used when printing values like error)
 GET_ERROR_MULT = 0.5 # used in getError
+MS_IN_S = 1000.0     # milliseconds in seconds
 
 # TODO: make sure raise Exception in constructor works correctly
 # TODO: fix set the set weights when running functionality??
@@ -51,6 +49,7 @@ class Network:
       self.nOutputs = nOutputs
       self.layerSpec = [nInputs, nHidden, nOutputs]
 
+      # pre-made loop arrays to optimize performance
       self.nInputsR = range(self.nInputs)
       self.nHiddenR = range(self.nHidden)
       self.nOutputsR = range(self.nOutputs)
@@ -78,12 +77,33 @@ class Network:
       if weights == None:
          self.weights = self.initRandomWeights(RANDOM_VALUE_RANGE[0], RANDOM_VALUE_RANGE[1])
       else:
-         if not (len(weights[0]) == nHidden and len(weights[N_LAYERS - 1]) == nOutputs):
-            raise Exception("The dimensions of the weights file does not match the provided dimensions.")
+         if not self.verifyWeights(weights):
+            raise Exception("The dimensions of the weights file does not match the network dimensions.")
          self.weights = weights
 
       return
    # def __init__(self, nInputs, nHidden, nOutputs, weights = None)
+
+   """
+   " Verifies the dimensions of the given weights object.
+   "
+   " weights specifies the weights object of which to verify the dimensions.
+   "
+   " Returns True if weights match the network's layerSpec in dimensions; otherwise
+   " returns False.
+   """
+   def verifyWeights(self, weights):
+      matches = True
+
+      matches = matches and len(weights) == len(self.layerSpec) - 1
+
+      for i in range(len(self.layerSpec) - 1):
+         matches = matches and len(weights[i]) == self.layerSpec[i]
+         matches = matches and len(weights[i][0]) == self.layerSpec[i + 1]
+      
+      return matches
+   # def verifyWeights(self, weights)
+
 
    """
    " Initializes the weight array as a 3D array:
@@ -156,12 +176,14 @@ class Network:
          
             self.hj[j] = self.f(self.thetaj[j])
             self.thetai[i] += self.weights[1][j][i] * self.hj[j]
+         # for j in self.nHiddenR
       
          self.Fi[i] = self.f(self.thetai[i])
          self.omegai[i] = self.Ti[i] - self.Fi[i]
          self.psii[i] = self.omegai[i] * self.fDeriv(self.thetai[i])
 
          self.Esum += self.omegai[i] * self.omegai[i]
+      # for i in self.nOutputsR
 
       return
    # def run(self)
@@ -273,7 +295,7 @@ class Network:
       print("Error Threshold:", errorThreshold)
       print("Learning Rate:", lr)
 
-      print("\nTraining time: " + str(time.time() - trainingTime))
+      print("\nTraining time: " + str(int((time.time() - trainingTime) * MS_IN_S)) + " ms")
 
       self.printNetworkSpecs()
       

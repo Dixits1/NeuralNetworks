@@ -1,6 +1,9 @@
 import re
+import traceback
 
 N_IND = 3
+
+cur_file = ""
 
 def getLinesFromFile(fName):
 	return open(fName, "r").read().split("\n")
@@ -15,7 +18,7 @@ def getInd(line):
 
 # i = index of line in lines array
 def raiseExc(i, msg):
-	raise Exception("line " + str(i + 1) + ": " + msg)
+	raise Exception(cur_file + " -> line " + str(i + 1) + ": " + msg)
 
 def isEmpty(line):
 	return len(rmSp(line)) == 0
@@ -40,20 +43,22 @@ def containsILC(line):
 # TODO: finish all of the other ones
 # TODO: print out what the linter doesnt check for
 
-
 def lint(fName):
+	global cur_file
+
+	cur_file = fName
 	lines = getLinesFromFile(fName)
 
 	# ~~~~ check that top of file contains block comment ~~~~
 	if not rmSp(lines[0]).startswith("\"\"\""):
-		raise Exception("No top-of-file comment.")
+		raiseExc(0, "No top-of-file comment.")
 
 	cnt = 1
 	while rmSp(lines[cnt]).startswith("\""):
 		cnt += 1
 
 	if not rmSp(lines[cnt - 1]).startswith("\"\"\""):
-		raise Exception("Top level comment formatted incorrectly.")
+		raiseExc(0, "Top level comment formatted incorrectly.")
 
 
 	for i in range(len(lines)):
@@ -73,7 +78,7 @@ def lint(fName):
 		if (not rmSp(lines[i]).startswith("\"")) and rmSp(lines[i]).endswith(":"):
 			
 			cnt = 1
-			while lines[i + cnt].startswith((getInd(lines[i]) + N_IND) * " ") or isEmpty(lines[i + cnt]):
+			while i + cnt < len(lines) and (lines[i + cnt].startswith((getInd(lines[i]) + N_IND) * " ") or isEmpty(lines[i + cnt])):
 				cnt += 1
 
 			if cnt >= 11:
@@ -127,8 +132,14 @@ def printToC(fName):
 	print("\" " + "\n\" ".join(toc))
 
 
-lint("network.py")
-lint("main.py")
-lint("fileio.py")
+files = ["network.py", "main.py", "fileio.py"]
+try:
+	for file in files:
+		lint(file)
+except Exception as e:
+	# print(e)
+	print(traceback.format_exc())
 
-
+for file in files:
+	print("\n~~~~~~ " + file + " ~~~~~~")
+	printToC(file)

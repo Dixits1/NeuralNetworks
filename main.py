@@ -52,19 +52,37 @@ if __name__ == "__main__":
    config = loadConfig(configName)
    tParams = config['training']['params'] # training parameters
 
-   # create the network
-   network = Network(config['shape']['nInputs'], config['shape']['nHidden'], config['shape']['nOutputs'])
+   network = None
+   weights = None
 
    # input/output training data
-   inputs, outputs = genBooleanTrainingData(config['training']['data']['booleanOperators'])
+   inputs = []
+   outputs = []
 
-   # choose training vs running
-   if config['trainNetwork']:
-      # training
-      network.train(inputs, outputs, tParams['maxIterations'], tParams['errorThreshold'], tParams['learningRate'])
+   # prevent running the network without loading in weights
+   if (not config['weights']['loadFromFile']) and (not config['trainNetwork']):
+      raise Exception("Mismatch in the configuration file \"" + configName + "\" -- can't run network without loading in weights.")
+
+   # load weights
+   if config['weights']['loadFromFile']:
+      weights = loadContentsFromFile(config['weights']['fileName'], WEIGHTS_DIR, config['shape'])
+
+   # load training data
+   if config['training']['data']['loadFromFile']:
+      inputs, outputs = loadContentsFromFile(config['training']['data']['fileName'], TRAINING_DIR, config['shape'])
    else:
-      # running
-      network.weights = config['weights']
+      inputs, outputs = genBooleanTrainingData(config['training']['data']['booleanOperators'])
+
+   # create network
+   network = Network(config['shape']['nInputs'], config['shape']['nHidden'], config['shape']['nOutputs'], weights=weights)
+
+   # training vs running network
+   if config['trainNetwork']: # training
+      weights = network.train(inputs, outputs, tParams['maxIterations'], tParams['errorThreshold'], tParams['learningRate'])
+      if config['training']['weights']['saveToFile']:
+         saveContentsToFile(weights, config['training']['weights']['fileName'], WEIGHTS_DIR, config['shape'])
+
+   else: # running
       network.trainingInputs = inputs
       network.trainingOutputs = outputs
 
