@@ -1,6 +1,6 @@
 """
 " Arjun Dixit
-" September 10, 2021
+" November 1, 2021
 "
 " A helper file containing helper methods for file I/O.
 " Contains the following methods:
@@ -18,7 +18,7 @@ TRAINING_DIR = "training/" # training data directory
 
 """
 " Loads in an object from a pickle file (.p), and returns that object 
-" if the verification matches.
+" if the verification matches the provided verification through verif.
 "
 " fName specifies the name of the file from which the contents should
 "       be loaded. The provided filename must include the file extension.

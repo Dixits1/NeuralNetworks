@@ -2,7 +2,9 @@
 " Arjun Dixit
 " September 10, 2021
 "
-" The main file used to run the network with parameters specified by the config file of CONFIG_FILE_NAME.
+" The main file used to run the network with parameters specified by the config file passed in as the first
+" parameter when running this file; if no parameter is provided, DEFAULT_CONFIG_NAME is used for the config
+" file name.
 " Contains the following methods:
 "
 " genBooleanTrainingData(booleanFnStrs)
@@ -14,10 +16,12 @@ from fileio import *
 import sys
 
 DEFAULT_CONFIG_NAME = "config.json" 
-N_ARGS_CONFIG = 2  # the number of args needed for the config to be in args
+N_ARGS_CONFIG = 2  # the number of args needed for the config to show up in args
 
 """
 " Generates training input and output data given the name of a boolean operator as a string in lowercase.
+"
+" booleanFnStrs specifies the list of  boolean functions as strings, used to generate the boolean training data.
 " 
 " Returns a tuple in the following format:
 " (array of training input arrays, array of training output arrays)
@@ -59,6 +63,12 @@ if __name__ == "__main__":
    inputs = []
    outputs = []
 
+   # network variables
+   nInputs = config['shape']['nInputs']
+   nHidden = config['shape']['nHidden']
+   nOutputs = config['shape']['nOutputs']
+
+
    # prevent running the network without loading in weights
    if (not config['weights']['loadFromFile']) and (not config['trainNetwork']):
       raise Exception("Mismatch in the configuration file \"" + configName + "\" -- can't run network without loading in weights.")
@@ -74,17 +84,16 @@ if __name__ == "__main__":
       inputs, outputs = genBooleanTrainingData(config['training']['data']['booleanOperators'])
 
    # create network
-   network = Network(config['shape']['nInputs'], config['shape']['nHidden'], config['shape']['nOutputs'], weights=weights)
+   network = Network(nInputs, nHidden, nOutputs, config['randomValRange'], config['trainNetwork'], weights = weights)
 
    # training vs running network
-   if config['trainNetwork']: # training
+   if config['trainNetwork']:
       weights = network.train(inputs, outputs, tParams['maxIterations'], tParams['errorThreshold'], tParams['learningRate'])
       if config['training']['weights']['saveToFile']:
          saveContentsToFile(weights, config['training']['weights']['fileName'], WEIGHTS_DIR, config['shape'])
-
-   else: # running
-      network.trainingInputs = inputs
-      network.trainingOutputs = outputs
+   else:
+      network.inputSet = inputs
+      network.outputSet = outputs
 
       network.runOverTrainingData()
 

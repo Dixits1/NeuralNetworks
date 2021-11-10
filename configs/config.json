@@ -20,9 +20,10 @@
             "booleanOperators": ["xor", "and", "or"]
         },
         "weights": {
-            "saveToFile": true,
+            "saveToFile": false,
             "fileName": "weights.p"
         }
     },
-    "trainNetwork": false
+    "trainNetwork": false,
+    "randomValRange": [-1.0, 1.5]
 }

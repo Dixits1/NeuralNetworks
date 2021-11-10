@@ -3,15 +3,17 @@
 " September 10, 2021
 "
 " A class which represents a feed-foward, fully-connected neural network with the following specifications:
-" any number of inputs, 1 hidden layer with any number of nodes, and any number of output values.
+" any number of inputs, 1 hidden layer with any number of nodes, and any number of output values. The network
+" trains using the backpropagation algorithm.
 " Contains the following methods:
 "
-" __init__(nInputs, nHidden, nOutputs, weights = None)
+" __init__(nInputs, nHidden, nOutputs, randRange, training, weights = None)
 " verifyWeights(weights)
 " initRandomWeights(randMin, randMax)
 " initArray(n)
 " f(x)
 " fDeriv(x)
+" runTraining()
 " run()
 " getRandomValue(randMin, randMax)
 " printNetworkSpecs()
@@ -24,14 +26,10 @@ import random
 from math import exp
 import time
 
-RANDOM_VALUE_RANGE = [-1.0, 1.5]
 N_LAYERS = 2         # number of layers (not including inputs)
 N_DIGITS_DEC = 8     # number of digits in the decimal after rounding (used when printing values like error)
 GET_ERROR_MULT = 0.5 # used in getError
 MS_IN_S = 1000.0     # milliseconds in seconds
-
-# TODO: make sure raise Exception in constructor works correctly
-# TODO: fix set the set weights when running functionality??
 
 class Network:
    """
@@ -40,54 +38,61 @@ class Network:
    " nInputs specifies the number of inputs
    " nHidden specifies the number of hidden nodes
    " nOutputs specifies the number of outputs
-   " weights specifies the weights array to use; if none is provided, weights
+   " randRange specifies the random number range used to randomize the weights for training
+   " training specifies if the network will be trained or not
+   " weights specifies the weights array to use; if none are provided, weights
    "         are randomly initialized. 
    """
-   def __init__(self, nInputs, nHidden, nOutputs, weights = None):      
+   def __init__(self, nInputs, nHidden, nOutputs, randRange, training, weights = None):      
       self.nInputs = nInputs
       self.nHidden = nHidden
       self.nOutputs = nOutputs
       self.layerSpec = [nInputs, nHidden, nOutputs]
 
+      self.randRange = randRange
+      self.preloadedWeights = weights != None
+
       # pre-made loop arrays to optimize performance
       self.nInputsR = range(self.nInputs)
       self.nHiddenR = range(self.nHidden)
       self.nOutputsR = range(self.nOutputs)
-      self.layerSpecR = [range(i) for i in self.layerSpec]
 
       # input, activation, outputs
       self.inputs = self.initArray(nInputs)    # input array
-      self.thetaj = self.initArray(nHidden)    # activations for hidden layer
+
+      # only initializes variables when training
+      if training:
+         self.thetaj = self.initArray(nHidden) # activations for hidden layer
+         self.omegai = self.initArray(nOutputs)
+         self.psii = self.initArray(nOutputs)
+         
       self.hj = self.initArray(nHidden)        # outputted values for hidden layer
       self.thetai = self.initArray(nOutputs)   # activations for output layer
       self.Fi = self.initArray(nOutputs)       # outputted values of output layer
       self.Ti = self.initArray(nOutputs)       # true output values
 
-      self.omegai = self.initArray(nOutputs)
-      self.psii = self.initArray(nOutputs)
-
       self.Esum = 0.0                          # total error of network
 
-      self.trainingInputs = self.initArray(1)  # all input data used for training
-      self.trainingOutputs = self.initArray(1) # all corresponding output data used for training
+      self.inputSet = self.initArray(1)        # all input data used for training
+      self.outputSet = self.initArray(1)       # all corresponding output data used for training
       self.trainingPos = -1                    # current position within the training data
 
       # if no weights are provided, initialize the weight array with random values;
       # else, initialize the weight array using the weights provided
       if weights == None:
-         self.weights = self.initRandomWeights(RANDOM_VALUE_RANGE[0], RANDOM_VALUE_RANGE[1])
+         self.weights = self.initRandomWeights(randRange[0], randRange[1])
       else:
          if not self.verifyWeights(weights):
             raise Exception("The dimensions of the weights file does not match the network dimensions.")
          self.weights = weights
 
       return
-   # def __init__(self, nInputs, nHidden, nOutputs, weights = None)
+   # def __init__(self, nInputs, nHidden, nOutputs, randRange, training, weights = None)
 
    """
    " Verifies the dimensions of the given weights object.
    "
-   " weights specifies the weights object of which to verify the dimensions.
+   " weights specifies the weights array of which to verify the dimensions.
    "
    " Returns True if weights match the network's layerSpec in dimensions; otherwise
    " returns False.
@@ -158,11 +163,9 @@ class Network:
       return fx * (1.0 - fx)
 
    """
-   " Propogate inputs through network by running computeLayer twice.
-   "
-   " Returns the output values of the network.
+   " Propogate inputs through network by running computeLayer twice. Only used when training.
    """
-   def run(self):
+   def runTraining(self):
       self.Esum = 0.0
 
       for i in self.nOutputsR:
@@ -183,6 +186,33 @@ class Network:
          self.psii[i] = self.omegai[i] * self.fDeriv(self.thetai[i])
 
          self.Esum += self.omegai[i] * self.omegai[i]
+      # for i in self.nOutputsR
+
+      return
+   # def runTraining(self)
+
+   """
+   " Propogate inputs through network by running computeLayer twice. Only used when running the network.
+   """
+   def run(self):
+      thetaj = 0.0
+      self.Esum = 0.0
+
+      for i in self.nOutputsR:
+         self.thetai[i] = 0.0
+
+         for j in self.nHiddenR:
+            thetaj = 0.0
+            for k in self.nInputsR:
+               thetaj += self.inputs[k] * self.weights[0][k][j]
+         
+            self.hj[j] = self.f(thetaj)
+            self.thetai[i] += self.weights[1][j][i] * self.hj[j]
+         # for j in self.nHiddenR
+      
+         self.Fi[i] = self.f(self.thetai[i])
+
+         self.Esum += (self.Ti[i] - self.Fi[i]) * (self.Ti[i] - self.Fi[i])
       # for i in self.nOutputsR
 
       return
@@ -209,7 +239,7 @@ class Network:
       print("\nNumber of Inputs:", self.nInputs)
       print("Number of Hidden Nodes:", self.nHidden)
       print("Number of Outputs:", self.nOutputs)
-      print("Random Value Range:", RANDOM_VALUE_RANGE)
+      print("Random Value Range:", self.randRange)
 
       return
 
@@ -221,13 +251,12 @@ class Network:
 
    """
    " Trains the network given a set of inputs and outputs for training data as well as the max iterations,
-   " error threshold, and learning rate.
+   " error threshold, and learning rate. Uses backpropagation to optimize the training.
    " 
    " inputs specifies the input training data
    " outputs specifies the output training data
    " maxIterations specifies the maximum iterations for training
-   " errorThreshold specifies the threshold which the training set error
-   "                must reach before exiting training
+   " errorThreshold specifies the threshold which the training set error must reach before exiting training
    " lr specifies lambda, or the learning rate
    "
    " Precondition: input and output arrays are the same length.
@@ -235,10 +264,6 @@ class Network:
    " Returns the weights after training is completed.
    """
    def train(self, inputs, outputs, maxIterations, errorThreshold, lr):
-      # initialize arrays and values used during training calculations
-      omegaj = self.initArray(self.nHidden)
-      psij = self.initArray(self.nHidden)
-
       iterations = 0
       
       totalError = 0.0                             # sum of error used for end condition
@@ -248,27 +273,30 @@ class Network:
       errorThresholdReached = False
       maxIterationsReached = False
 
-      # set input and output training arrays
-      self.trainingInputs = inputs
-      self.trainingOutputs = outputs
+      trainingTime = time.time()
 
-      trainingTime = time.time() 
+      omegaj = 0.0
+      psij = 0.0
+
+      # set input and output training arrays
+      self.inputSet = inputs
+      self.outputSet = outputs
 
       # training loop
       while not finished:
          self.inputs, self.Ti = self.getNextTrainingMember()
 
-         self.run()
+         self.runTraining()
 
-         for k in self.nInputsR:
-            for j in self.nHiddenR:
-               omegaj[j] = 0.0
-               for i in self.nOutputsR:
-                  omegaj[j] += self.psii[i] * self.weights[1][j][i]
-                  self.weights[1][j][i] += lr * self.hj[j] * self.psii[i]
+         for j in self.nHiddenR:
+            omegaj = 0.0
+            for i in self.nOutputsR:
+               omegaj += self.psii[i] * self.weights[1][j][i]
+               self.weights[1][j][i] += lr * self.hj[j] * self.psii[i]
 
-               psij[j] = omegaj[j] * self.fDeriv(self.thetaj[j])
-               self.weights[0][k][j] += lr * self.inputs[k] * psij[j]
+            psij = omegaj * self.fDeriv(self.thetaj[j])
+            for k in self.nInputsR:
+               self.weights[0][k][j] += lr * self.inputs[k] * psij
 
          iterations += 1
          totalError += self.getError()
@@ -283,6 +311,8 @@ class Network:
          # end condition
          finished = maxIterationsReached or errorThresholdReached
       # while not finished
+
+      trainingTime = time.time() - trainingTime
       
       self.runOverTrainingData()
 
@@ -294,8 +324,9 @@ class Network:
       print("\nMax Iterations:", maxIterations)
       print("Error Threshold:", errorThreshold)
       print("Learning Rate:", lr)
+      print("Use Preloaded Weights: " + str(self.preloadedWeights))
 
-      print("\nTraining time: " + str(int((time.time() - trainingTime) * MS_IN_S)) + " ms")
+      print("\nTraining time: " + str(int(trainingTime * MS_IN_S)) + " ms")
 
       self.printNetworkSpecs()
       
@@ -311,10 +342,10 @@ class Network:
    """
    def getNextTrainingMember(self):
       self.trainingPos += 1
-      if self.trainingPos == len(self.trainingInputs):
+      if self.trainingPos == len(self.inputSet):
          self.trainingPos = 0
 
-      return (self.trainingInputs[self.trainingPos], self.trainingOutputs[self.trainingPos])
+      return (self.inputSet[self.trainingPos], self.outputSet[self.trainingPos])
 
    """
    " Runs the network over each of the values in the training data and prints the results
@@ -339,7 +370,7 @@ class Network:
 
       print("\nNetwork Inputs\tNetwork Output\tTrue Output\tError\t")
       
-      for i in range(len(self.trainingInputs)):
+      for i in range(len(self.inputSet)):
          self.inputs, self.Ti = self.getNextTrainingMember()
 
          self.run()
@@ -351,7 +382,7 @@ class Network:
          totalError += errorRounded
 
          print(self.inputs, "\t", FiRounded, "\t", TiRounded, "\t\t", errorRounded)
-      # for i in range(len(self.trainingInputs))
+      # for i in range(len(self.inputSet))
 
       print("\nTotal Error: ", round(totalError, N_DIGITS_DEC))
 
