@@ -1,12 +1,12 @@
 {
     "shape": {
         "nInputs": 2,
-        "nHidden1": 2,
-        "nHidden2": 2,
+        "nHidden1": 5,
+        "nHidden2": 10,
         "nOutputs": 3
     },
     "weights": {
-        "loadFromFile": false,
+        "loadFromFile": true,
         "fileName": "weights.p"
     },
     "training": {
@@ -21,10 +21,10 @@
             "booleanOperators": ["xor", "and", "or"]
         },
         "weights": {
-            "saveToFile": false,
+            "saveToFile": true,
             "fileName": "weights.p"
         }
     },
-    "trainNetwork": true,
+    "trainNetwork": false,
     "randomValRange": [0.1, 1.5]
 }

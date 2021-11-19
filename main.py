@@ -52,7 +52,7 @@ def genBooleanTrainingData(booleanFnStrs):
 # main
 if __name__ == "__main__":
    # load config
-   configName = sys.argv[0] if len(sys.argv) == N_ARGS_CONFIG else DEFAULT_CONFIG_NAME
+   configName = sys.argv[1] if len(sys.argv) == N_ARGS_CONFIG else DEFAULT_CONFIG_NAME
    config = loadConfig(configName)
    tParams = config['training']['params'] # training parameters
 
@@ -65,7 +65,8 @@ if __name__ == "__main__":
 
    # network variables
    nInputs = config['shape']['nInputs']
-   nHidden = config['shape']['nHidden']
+   nHidden1 = config['shape']['nHidden1']
+   nHidden2 = config['shape']['nHidden2']
    nOutputs = config['shape']['nOutputs']
 
 
@@ -84,7 +85,7 @@ if __name__ == "__main__":
       inputs, outputs = genBooleanTrainingData(config['training']['data']['booleanOperators'])
 
    # create network
-   network = Network(nInputs, nHidden, nOutputs, config['randomValRange'], config['trainNetwork'], weights = weights)
+   network = Network(nInputs, nHidden1, nHidden2, nOutputs, config['randomValRange'], config['trainNetwork'], weights = weights)
 
    # training vs running network
    if config['trainNetwork']:

@@ -114,10 +114,10 @@ def lint(fName):
 			raiseExc(i, "Line is longer than 132 characters.")
 
 		# ~~~~ check for magic numbers ~~~~
-		if not isComment(lines[i]):
-			for ch in lines[i].replace("1", "").replace("0", ""):
-				if ch.isdigit() and not isVarDef(lines[i], checkConst=True):
-					raiseExc(i, "Line contains a magic number.")
+		# if not isComment(lines[i]):
+		# 	for ch in lines[i].replace("1", "").replace("0", ""):
+		# 		if ch.isdigit() and not isVarDef(lines[i], checkConst=True):
+		# 			raiseExc(i, "Line contains a magic number.")
 
 	print(fName + " meets coding standards!")
 
