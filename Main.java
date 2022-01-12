@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Random;
 import java.util.stream.IntStream;
 
 public class Main {
@@ -20,6 +21,7 @@ public class Main {
     private static final String CONFIG_DIR = "configs/";
     private static final String WEIGHTS_DIR = "weights/";
     private static final String INPUT_EXT = ".in";
+    private static final int nShuffles = 50;
 
     public static double[][][] loadData(String dir) throws IOException {
         File f = new File(dir);
@@ -44,6 +46,25 @@ public class Main {
             inputs[i] = Arrays.stream(Files.readString(Paths.get(dir + allFiles[i]), StandardCharsets.US_ASCII).split("\n")).mapToDouble(Double::parseDouble).toArray();
             outputs[i] = new double[classes.length];
             outputs[i][Integer.parseInt(allFiles[i].substring(0, 1)) - 1] = 1.0;
+        }
+
+
+        double[] temp;
+        int randNum1;
+        int randNum2;
+
+        Random r = new Random();
+
+        for(int i = 0; i < nShuffles; i++) {
+            randNum1 = r.nextInt(allFiles.length - 1);
+            randNum2 = r.nextInt(allFiles.length - 1);
+            temp = inputs[randNum1];
+            inputs[randNum1] = inputs[randNum2];
+            inputs[randNum2] = temp;
+
+            temp = outputs[randNum1];
+            outputs[randNum1] = outputs[randNum2];
+            outputs[randNum2] = temp;
         }
 
         return new double[][][]{inputs, outputs};
@@ -146,7 +167,7 @@ public class Main {
         // training vs running network
         if (Boolean.parseBoolean(config.get("trainNetwork"))) {
             System.out.println("Training Network...");
-            weights = network.train(trainingData[0], trainingData[1], Integer.parseInt(config.get("training_params_maxIterations")), Double.parseDouble(config.get("training_params_errorThreshold")), Double.parseDouble(config.get("training_params_learningRate")), Double.parseDouble(config.get("training_params_momentum")));
+            weights = network.train(trainingData[0], trainingData[1], Integer.parseInt(config.get("training_params_maxIterations")), Double.parseDouble(config.get("training_params_errorThreshold")), Double.parseDouble(config.get("training_params_lr")), Double.parseDouble(config.get("training_params_lr_momentum")));
             if(Boolean.parseBoolean(config.get("training_weights_saveToFile"))) {
                 saveWeights(weights, config.get("training_weights_fileName"), networkShape);
             }

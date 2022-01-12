@@ -1,0 +1,1 @@
+scp -r -i "MacbookPro2021.pem" ~/Documents/NeuralNetworksServer/ ubuntu@ec2-54-187-177-178.us-west-2.compute.amazonaws.com:~/

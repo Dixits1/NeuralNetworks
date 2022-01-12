@@ -5,6 +5,7 @@ public class Network {
     private static final int N_LAYERS = 3;
     private static final double GET_ERROR_MULT = 0.5;
     private static final double MS_IN_S = 1000;
+    private static final int LR_UPDATE_ITERS = 10;
 
     private int nInputs;
     private int nHidden1;
@@ -149,9 +150,12 @@ public class Network {
      * Returns the value of the output function at x.
      */
     private double f(double x) {
-        // double e2x = Math.exp(2 * x);
-        // return (e2x - 1) / (e2x + 1);
+        // double e2x = Math.exp(2.0 * x);
+        // return (e2x - 1.0) / (e2x + 1.0);
+
         return 1.0 / (1.0 + Math.exp(-x));
+
+        // return x;
     }
 
     /**
@@ -159,10 +163,13 @@ public class Network {
      * 
      */
     private double fDeriv(double x) {
-        // double e2x = Math.exp(2 * x);
-        // return (4 * e2x) / ((e2x + 1) * (e2x + 1));
+        // double e2x = Math.exp(2.0 * x);
+        // return (4.0 * e2x) / ((e2x + 1.0) * (e2x + 1.0));
+
         double fx = f(x);
         return fx * (1.0 - fx);
+
+        // return 1.0;
     }
 
     /**
@@ -266,7 +273,7 @@ public class Network {
      * Returns the error of the network.
      */
     private double getError() {
-        return GET_ERROR_MULT * Esum;
+        return Math.sqrt(Esum / ((double) nOutputs));
     }
 
     public double[][][] train(double[][] inputs, double[][] outputs, int maxIterations, double errorThreshold, double lr, double momentum) {
@@ -339,6 +346,7 @@ public class Network {
             iterations++;
             totalError += getError();
             if (trainingPos == trainingLen - 1) {
+                totalError /= trainingLen;
                 System.out.println(iterations + " - " + totalError);
                 errorThresholdReached = totalError <= errorThreshold;
                 totalError = 0.0;

@@ -4,20 +4,20 @@ shape_nHidden2 20
 shape_nOutputs 5
 
 weights_loadFromFile true
-weights_fileName weights_50_20.txt
+weights_fileName weights_50_20_newest.txt
 
-training_params_maxIterations 10000
-training_params_learningRate 6
-training_params_errorThreshold 1e-3
-training_params_momentum 0
+training_params_maxIterations 1000
+training_params_lr 0.05
+training_params_lr_momentum 0.4
+training_params_errorThreshold 0.001
 
 training_data_dirName training/
 
 training_weights_saveToFile true
-training_weights_fileName weights_50_20.txt
+training_weights_fileName weights_50_20_newest.txt
 
-testing_data_dirName testing/
+testing_data_dirName training/
 
 trainNetwork false
-randomMin -1.5
-randomMax 1.5
+randomMin -2.0
+randomMax 2.0
